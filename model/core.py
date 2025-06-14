@@ -144,16 +144,15 @@ class ResidualMixOp(nn.Module):
     A simplified residual connection with normalization, potentially for pre-norm or post-norm setups.
     Given `sublayer_norm_factory`, it suggests a form of pre-normalization or a specific mixing.
     """
-    def __init__(self, sublayer_norm_factory: Callable):
+    def __init__(self, dim: int, sublayer_norm_factory):
         super().__init__()
-        self.norm = sublayer_norm_factory(1) # This dim is tricky, usually it's d_model.
-                                             # For simplicity, if it's a residual mixer,
-                                             # it applies to the combined output.
-                                             # Assuming it normalizes the residual path or output sum.
-        # Let's re-think: the config suggests norm in residual_op_factory(sublayer_norm_factory)
-        # which means this norm is applied *to the output of the sublayer* before adding.
-        # So it should be `d_model`.
-        self.norm = sublayer_norm_factory # The factory is passed, not the dim directly
+        # This line creates the actual RMSNorm module instance
+        self.norm = sublayer_norm_factory(dim) 
+
+        # You might have other components for your ResidualMixOp here
+        # For example, if it's a learned mix, you might have:
+        # self.alpha = nn.Parameter(torch.ones(1))
+        # or other layers that define how the input and residual are combined.
 
     def forward(self, x: torch.Tensor, sublayer_output: torch.Tensor):
         # This is a generic residual operation.
@@ -255,8 +254,8 @@ class TransformerLayer(nn.Module):
                 sublayer_output = sublayer(normed_x)
                 return x + sublayer_output
 
-        self.attn_residual_op = _ResidualMixOp(residual_op_factory().sublayer_norm_factory, d_model)
-        self.ffn_residual_op = _ResidualMixOp(residual_op_factory().sublayer_norm_factory, d_model)
+        self.attn_residual_op = residual_op_factory()
+        self.ffn_residual_op = residual_op_factory()
 
         # To avoid circular import for HParams in the factory calls within main Decoder
         # The hparams object is passed to TransformerLayer
