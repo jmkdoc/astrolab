@@ -7,11 +7,13 @@ from typing import Callable
 import model.core 
 
 class CoreLightningTrainer(pl.LightningModule):
-    def __init__(self, 
-                 model_factory: Callable, 
-                 optimizer_factory: Callable,
-                 lightning_trainer_factory: Callable, # This is actually used by cli.Config to build the Trainer, not passed here.
-                 datamodule_factory: Callable): # datamodule_factory also used by cli.Config
+    def __init__(self, model_factory, optimizer_factory, lightning_trainer_factory, datamodule_factory): # <<< Make sure datamodule_factory is a parameter
+        super().__init__()
+        self.model = model_factory()
+        self.optimizer_factory = optimizer_factory
+        self.lightning_trainer_factory = lightning_trainer_factory
+        self.datamodule_factory = datamodule_factory # <<< ADD THIS LINE to store the factory
+
         super().__init__()
         self.save_hyperparameters() # Saves model_factory and optimizer_factory to hparams.yaml
 
