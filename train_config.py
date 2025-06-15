@@ -139,7 +139,7 @@ cli.Config(
             callbacks = [], # No callbacks enabled by default
         ),
         datamodule_factory=lambda: dataset.DM(
-            dataset_path='dataset/pile.py',
+            dataset_path='pile.py',
             tokenizer_factory=TOKENIZER_FACTORY,
             batch_size=BATCH_SIZE,
             sequence_length=MAX_SEQUENCE_LENGTH,
