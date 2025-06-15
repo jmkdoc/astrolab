@@ -138,10 +138,10 @@ cli.Config(
             gradient_clip_val=0.5,
             log_every_n_steps=20,
             #logger = [], # No loggers enabled by default in your config
-            logger = CSVLogger(save_dir='./lightning_logs_csv/', name=LOG_NAME), # <<< CHANGE THIS LINE
+            logger = CSVLogger(save_dir='./', name=LOG_NAME), # <<< CHANGE THIS LINE
             callbacks = [ # <<< MODIFY THIS LIST
                 ModelCheckpoint(
-                    dirpath='./result', # <<< YOUR DESIRED PATH HERE
+                    dirpath='./', # <<< YOUR DESIRED PATH HERE
                     filename='{epoch}-{step}-{val_loss:.2f}', # Name format for checkpoints
                     save_top_k=1, # Saves only the best K models based on monitor
                     monitor='val_loss', # Metric to monitor (e.g., validation loss)
