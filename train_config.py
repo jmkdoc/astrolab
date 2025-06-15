@@ -11,6 +11,8 @@ import model.core
 import posemb
 import mask # For AlibiMask
 import dataset
+from lightning.pytorch.callbacks import ModelCheckpoint 
+from lightning.pytorch.loggers import CSVLogger # <<< ADD THIS IMPORT
 # --- Constants for your model and training ---
 BATCH_SIZE = 8
 VOCAB_SIZE = 50304 # Based on gpt2 tokenizer vocab size, + special tokens if added
@@ -135,8 +137,19 @@ cli.Config(
             accumulate_grad_batches=1,
             gradient_clip_val=0.5,
             log_every_n_steps=20,
-            logger = [], # No loggers enabled by default in your config
-            callbacks = [], # No callbacks enabled by default
+            #logger = [], # No loggers enabled by default in your config
+            logger = CSVLogger(save_dir='./lightning_logs_csv/', name=LOG_NAME), # <<< CHANGE THIS LINE
+            callbacks = [ # <<< MODIFY THIS LIST
+                ModelCheckpoint(
+                    dirpath='./result', # <<< YOUR DESIRED PATH HERE
+                    filename='{epoch}-{step}-{val_loss:.2f}', # Name format for checkpoints
+                    save_top_k=1, # Saves only the best K models based on monitor
+                    monitor='val_loss', # Metric to monitor (e.g., validation loss)
+                    mode='min', # 'min' for loss (lower is better), 'max' for accuracy (higher is better)
+                    save_last=True, # Also saves the latest checkpoint as 'last.ckpt'
+                ),
+                # Add other callbacks here if you have any
+            ],
         ),
         datamodule_factory=lambda: dataset.DM(
             dataset_path='pile.py',
