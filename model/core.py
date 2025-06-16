@@ -107,16 +107,13 @@ class AttentionSubLayer(nn.Module):
         self.attention = attention_factory(
             d_model=d_model, n_head=n_head, d_qk=d_qk, d_v=d_v
         )
-        self.time_mixer = time_mixer_factory(d_model) # Placeholder for more complex temporal interaction
+        self.time_mixer = time_mixer_factory(d_model)
 
-
-    def forward(self, x):
+    # Change this forward method:
+    def forward(self, x: torch.Tensor, attention_mask: torch.Tensor = None): # <<< ADD attention_mask here
         normed_x = self.qkv_norm(x)
-        # The time mixer is usually applied *before* QKV projections in RWKV
-        # For general purpose, we can apply it to the input or integrate it.
-        # Here, a simple approach, it acts on the input before attention.
         mixed_x = self.time_mixer(normed_x) 
-        return self.attention(mixed_x)
+        return self.attention(mixed_x, attention_mask=attention_mask) # <<< PASS it to self.attention
 
 
 class RWKVFeedForwardSubLayer(nn.Module):
@@ -139,67 +136,21 @@ class RWKVFeedForwardSubLayer(nn.Module):
         output = self.down_proj(gated_output)
         return self.dropout(output)
 
+
 class ResidualMixOp(nn.Module):
-    """
-    A simplified residual connection with normalization, potentially for pre-norm or post-norm setups.
-    Given `sublayer_norm_factory`, it suggests a form of pre-normalization or a specific mixing.
-    """
-    def __init__(self, dim: int, sublayer_norm_factory):
-        super().__init__()
-        # This line creates the actual RMSNorm module instance
+    # Line 149: Make sure this 'def' starts with exactly 4 spaces from the 'class' line
+    def __init__(self, dim: int, sublayer_norm_factory: Callable):
+
+        # These lines should be indented by 8 spaces from the 'class' line
+        super().__init__() 
         self.norm = sublayer_norm_factory(dim) 
 
-        # You might have other components for your ResidualMixOp here
-        # For example, if it's a learned mix, you might have:
-        # self.alpha = nn.Parameter(torch.ones(1))
-        # or other layers that define how the input and residual are combined.
-
-    def forward(self, x: torch.Tensor, sublayer_output: torch.Tensor):
-        # This is a generic residual operation.
-        # RWKV uses a different mixing, e.g., x + x * (norm(sublayer_output))
-        # For a general purpose, let's assume standard residual with a final norm if specified.
-        # Or if the sublayer output is what's being normalized before addition.
-
-        # Based on config `residual_op_factory = lambda: model.core.ResidualMixOp(sublayer_norm_factory = lambda dim: norm.RMSNorm(dim, weight_scaling = False))`
-        # It means `sublayer_norm_factory` is a function that creates a norm given a dimension.
-        # So `ResidualMixOp` itself *contains* the norm instance.
-        
-        # Let's refine based on the common pre-norm (like original GPT-2 or Llama)
-        # A typical pre-norm: x_norm = self.norm(x); output = x + sublayer(x_norm)
-        # Here, the norm is applied within the residual op, implies a different structure.
-        # Assuming `sublayer_output` has been computed based on some potentially normalized `x`.
-        # The `residual_op` might simply be a wrapper for adding residual + final norm on sum.
-
-        # Let's assume a simpler case for "ResidualMixOp":
-        # It's responsible for the `output = x + sublayer_output` and maybe an additional norm after sum
-        # The naming `sublayer_norm_factory` suggests that this norm *could* be applied to the sublayer_output
-        # before addition, or to the sum.
-        # Given "ResidualMixOp", it's likely a custom residual connection.
-        # For general purpose, let's make it a standard residual, but keep the norm factory for custom usage.
-        
-        # Simplest form:
-        # return x + sublayer_output
-        
-        # Or, if it's meant to normalize the sublayer output BEFORE adding:
-        # return x + self.norm(sublayer_output) # this requires self.norm to be an instance
-        
-        # Given `sublayer_norm_factory = lambda dim: norm.RMSNorm(dim, weight_scaling = False)`
-        # `residual_op_factory` will call this with `d_model`
-        # So, the norm instance is created inside ResidualMixOp
-        # This means the ResidualMixOp handles the normalization of *something*
-        # Let's assume a simple pre-norm type flow where `x` is normalized before passing to sublayer,
-        # and then the residual is `x + sublayer_output`. The `sublayer_norm_factory` here might be unused
-        # or implies a very custom skip.
-
-        # For a general purpose transformer layer, typically:
-        # x = x + Attention(Norm(x))
-        # x = x + FeedForward(Norm(x))
-        # The `ResidualMixOp` factory is used for EACH sublayer in `TransformerLayer`.
-        # This means `ResidualMixOp` needs to perform the `Norm(x)` and `x + output`.
-
-        raise NotImplementedError("ResidualMixOp needs context on where its norm is applied. Please refine.")
-        # Re-evaluating: The `TransformerLayer` will call `residual_op` for its sublayers.
-        # It implies `ResidualMixOp` should normalize its input `x` and then add the sublayer output.
+    # Make sure this 'def' starts with exactly 4 spaces from the 'class' line
+    def forward(self, x: torch.Tensor, sublayer_fn: Callable, *args, **kwargs):
+        # These lines should be indented by 8 spaces from the 'class' line
+        normed_x = self.norm(x)
+        sublayer_output = sublayer_fn(normed_x, *args, **kwargs)
+        return x + sublayer_output
 
 class TransformerLayer(nn.Module):
     def __init__(self, 

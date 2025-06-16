@@ -14,10 +14,10 @@ import dataset
 from lightning.pytorch.callbacks import ModelCheckpoint 
 from lightning.pytorch.loggers import CSVLogger # <<< ADD THIS IMPORT
 # --- Constants for your model and training ---
-BATCH_SIZE = 8
+BATCH_SIZE = 1
 VOCAB_SIZE = 50304 # Based on gpt2 tokenizer vocab size, + special tokens if added
-TOKENIZER_FACTORY = lambda: transformers.AutoTokenizer.from_pretrained('gpt2')
-MAX_SEQUENCE_LENGTH = 1024
+TOKENIZER_FACTORY = lambda: transformers.AutoTokenizer.from_pretrained('EleutherAI/gpt-neo-125M')
+MAX_SEQUENCE_LENGTH = 256
 
 LOG_PROJECT = 'gptcore'
 LOG_NAME = 'GPTAlpha L12D768H12CM2V1Adam'
@@ -34,7 +34,7 @@ cli.Config(
         hparams = model.hparams.HParams(
             vocab_size = VOCAB_SIZE,
             max_sequence_length=MAX_SEQUENCE_LENGTH,
-            n_layer=12,
+            n_layer=2,
             n_head=12,
             d_model=768,
             n_kv_head_ratio = 1,
@@ -84,7 +84,7 @@ cli.Config(
             hparams = model.hparams.HParams(
                 vocab_size = VOCAB_SIZE,
                 max_sequence_length=MAX_SEQUENCE_LENGTH,
-                n_layer=12,
+                n_layer=2,
                 n_head=12,
                 d_model=768,
                 n_kv_head_ratio = 1,
@@ -130,7 +130,7 @@ cli.Config(
             betas=(0.9,0.999),
         ),
         lightning_trainer_factory = lambda: pl.Trainer(
-            enable_progress_bar=False,
+            enable_progress_bar=True,
             max_epochs=-1,
             val_check_interval=1024,
             precision = 'bf16-mixed',
@@ -138,10 +138,10 @@ cli.Config(
             gradient_clip_val=0.5,
             log_every_n_steps=20,
             #logger = [], # No loggers enabled by default in your config
-            logger = CSVLogger(save_dir='./', name=LOG_NAME), # <<< CHANGE THIS LINE
+            logger = CSVLogger(save_dir='./result', name=LOG_NAME), # <<< CHANGE THIS LINE
             callbacks = [ # <<< MODIFY THIS LIST
                 ModelCheckpoint(
-                    dirpath='./', # <<< YOUR DESIRED PATH HERE
+                    dirpath='./result', # <<< YOUR DESIRED PATH HERE
                     filename='{epoch}-{step}-{val_loss:.2f}', # Name format for checkpoints
                     save_top_k=1, # Saves only the best K models based on monitor
                     monitor='val_loss', # Metric to monitor (e.g., validation loss)
