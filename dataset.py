@@ -74,7 +74,8 @@ class DM(pl.LightningDataModule):
             batch_size=self.batch_size,
             shuffle=True,
             num_workers=self.num_workers,
-            pin_memory=True, # Improves data transfer to GPU
+            #pin_memory=True,
+            pin_memory=torch.cuda.is_available(), # Improves data transfer to GPU
         )
 
     def val_dataloader(self):
@@ -83,7 +84,8 @@ class DM(pl.LightningDataModule):
             batch_size=self.batch_size,
             shuffle=False,
             num_workers=self.num_workers,
-            pin_memory=True,
+            #pin_memory=True,
+            pin_memory=torch.cuda.is_available()
         )
 
     # test_dataloader, predict_dataloader can be added similarly if needed

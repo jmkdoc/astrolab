@@ -16,15 +16,24 @@ from lightning.pytorch.loggers import CSVLogger # <<< ADD THIS IMPORT
 # --- Constants for your model and training ---
 BATCH_SIZE = 1
 VOCAB_SIZE = 50304 # Based on gpt2 tokenizer vocab size, + special tokens if added
-TOKENIZER_FACTORY = lambda: transformers.AutoTokenizer.from_pretrained('EleutherAI/gpt-neo-125M')
+TOKENIZER_FACTORY = lambda: transformers.AutoTokenizer.from_pretrained('gpt2')
 MAX_SEQUENCE_LENGTH = 256
 
 LOG_PROJECT = 'gptcore'
-LOG_NAME = 'GPTAlpha L12D768H12CM2V1Adam'
+LOG_NAME = 'TR_AI_JB'
 
 # --- THE CORE CONFIGURATION ---
 # This call initializes the cli.Config singleton with all your model and training parameters.
 # It MUST be executed once when your program starts (which happens when main_training_script.py imports this file).
+class Config(cli.Config): # Or just 'Config' if it's directly cli.Config
+    # ... other config parameters ...
+
+    model_factory = lambda: model.core.Decoder(...)
+    optimizer_factory = lambda trainer_module: torch.optim.AdamW(...)
+    lightning_trainer_factory = lambda: pl.Trainer(...)
+    datamodule_factory = lambda: data.MyDataModule(...)
+
+
 cli.Config(
     seed_everything = 1337,
     compile = True,
