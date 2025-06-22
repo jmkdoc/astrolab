@@ -135,7 +135,7 @@ cli.Config(
         ),
         optimizer_factory = lambda params: torch.optim.Adam(
             params=params,
-            lr=6e-4,
+            lr=1e-5,  # Start with 1e-5 (0.00001) or even 5e-6 (0.000005)
             betas=(0.9,0.999),
         ),
         lightning_trainer_factory = lambda: pl.Trainer(
