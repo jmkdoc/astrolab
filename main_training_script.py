@@ -6,7 +6,7 @@ import os
 
 # IMPORTANT: This line ensures your cli.Config(...) call from train_config.py
 # is executed, which initializes the singleton Config instance with your settings.
-import train_config
+import train_config-v3
 import cli # Import cli module itself to access the Config class if needed directly
 
 def main():

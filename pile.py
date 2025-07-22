@@ -266,3 +266,138 @@ class ThePile(datasets.GeneratorBasedBuilder):
                                 data = json.loads(row)
                                 yield key, data
                                 key += 1
+
+
+# pile.py (inside ThePile class)
+
+def _generate_examples(self, files):
+    """Yield examples as (key, example) tuples."""
+    key = 0
+    if isinstance(files, list): # This branch is for the "all" config (train/val/test splits)
+        import zstandard as zstd
+
+        for path in files:
+            with zstd.open(open(path, "rb"), "rt", encoding="utf-8") as f:
+                for row in f:
+                    try:
+                        data = json.loads(row)
+                        # --- DEBUG CHECK 1: Data integrity ---
+                        if not isinstance(data, dict):
+                            print(f"🚨 WARNING: Row {key} from {path} is not a dictionary. Skipping.")
+                            continue
+                        if "text" not in data or not isinstance(data["text"], str) or not data["text"].strip():
+                            print(f"🚨 WARNING: Row {key} from {path} has missing, non-string, or empty 'text' field. Skipping.")
+                            continue
+                        if "meta" not in data: # Meta field might be optional or structured differently per subset
+                            print(f"ℹ️ INFO: Row {key} from {path} is missing 'meta' field.")
+
+                        # Print a snippet of the text
+                        if key < 10: # Only print for the first few examples
+                            print(f"DEBUG: Example {key} from '{data.get('meta', {}).get('pile_set_name', 'N/A')}' (Length: {len(data['text'])})")
+                            print(f"  Text snippet: '{data['text'][:100].replace('\\n', ' ').strip()}'")
+                        # --- END DEBUG CHECK 1 ---
+
+                        yield key, data
+                        key += 1
+                    except json.JSONDecodeError as e:
+                        print(f"🚨 WARNING: Failed to parse JSON row {key} in {path}: {row[:100]}... Error: {e}. Skipping.")
+                        continue
+                    except Exception as e:
+                        print(f"🚨 WARNING: Unexpected error processing row {key} in {path}: {e}. Skipping.")
+                        continue
+    else: # This branch is for individual subset configs
+        for subset in files:
+            if subset in {"europarl", "free_law", "nih_exporter", "pubmed", "ubuntu_irc"}:
+                import zstandard as zstd
+
+                with zstd.open(open(files[subset], "rb"), "rt", encoding="utf-8") as f:
+                    for row in f:
+                        try:
+                            data = json.loads(row)
+                            # --- DEBUG CHECK 2: Data integrity ---
+                            if not isinstance(data, dict):
+                                print(f"🚨 WARNING: Row {key} from {subset} is not a dictionary. Skipping.")
+                                continue
+                            if "text" not in data or not isinstance(data["text"], str) or not data["text"].strip():
+                                print(f"🚨 WARNING: Row {key} from {subset} has missing, non-string, or empty 'text' field. Skipping.")
+                                continue
+                            # Check meta as per your _FEATURES definition for this subset
+                            if "meta" not in data or not isinstance(data["meta"], str): # Assuming meta is string for these
+                                 print(f"ℹ️ INFO: Row {key} from {subset} has missing or non-string 'meta' field.")
+                            # Print a snippet
+                            if key < 10:
+                                print(f"DEBUG: Example {key} from '{subset}' (Length: {len(data['text'])})")
+                                print(f"  Text snippet: '{data['text'][:100].replace('\\n', ' ').strip()}'")
+                            # --- END DEBUG CHECK 2 ---
+
+                            yield key, data
+                            key += 1
+                        except json.JSONDecodeError as e:
+                            print(f"🚨 WARNING: Failed to parse JSON row {key} in {subset}: {row[:100]}... Error: {e}. Skipping.")
+                            continue
+                        except Exception as e:
+                            print(f"🚨 WARNING: Unexpected error processing row {key} in {subset}: {e}. Skipping.")
+                            continue
+            elif subset in {"enron_emails", "hacker_news", "pubmed_central"}:
+                for path, file in files[subset]:
+                    try:
+                        # Note: errors="ignore" might mask problematic characters.
+                        # But direct NaN is unlikely from this.
+                        text = file.read().decode("utf-8", errors="ignore")
+                        if subset == "enron_emails":
+                            meta = {"file": path}
+                        else:
+                            id_ = path.split("/")[-1].split(".")[0]
+                            meta = {"id": id_}
+
+                        # --- DEBUG CHECK 3: Data integrity ---
+                        if not isinstance(text, str) or not text.strip():
+                            print(f"🚨 WARNING: File '{path}' has empty or non-string content. Skipping.")
+                            continue
+                        # Print a snippet
+                        if key < 10:
+                            print(f"DEBUG: Example {key} from '{subset}' (Length: {len(text)})")
+                            print(f"  Text snippet: '{text[:100].replace('\\n', ' ').strip()}'")
+                        # --- END DEBUG CHECK 3 ---
+
+                        yield key, {
+                            "text": text,
+                            "meta": str(meta), # meta is expected as string by _FEATURES
+                        }
+                        key += 1
+                    except Exception as e:
+                        print(f"🚨 WARNING: Error reading/decoding file '{path}' for subset '{subset}': {e}. Skipping.")
+                        continue
+            elif subset in {"uspto", "github"}:
+                import zstandard as zstd
+
+                for path, file in files[subset]:
+                    with zstd.open(file, "rt", encoding="utf-8") as f:
+                        for row in f:
+                            try:
+                                data = json.loads(row)
+                                # --- DEBUG CHECK 4: Data integrity ---
+                                if not isinstance(data, dict):
+                                    print(f"🚨 WARNING: Row {key} from {path} is not a dictionary. Skipping.")
+                                    continue
+                                if "text" not in data or not isinstance(data["text"], str) or not data["text"].strip():
+                                    print(f"🚨 WARNING: Row {key} from {path} has missing, non-string, or empty 'text' field. Skipping.")
+                                    continue
+                                # Check meta as per your _FEATURES definition for this subset
+                                if "meta" not in data or not isinstance(data["meta"], str): # Assuming meta is string for these
+                                    print(f"ℹ️ INFO: Row {key} from {path} is missing or non-string 'meta' field.")
+
+                                # Print a snippet
+                                if key < 10:
+                                    print(f"DEBUG: Example {key} from '{subset}' (Length: {len(data['text'])})")
+                                    print(f"  Text snippet: '{data['text'][:100].replace('\\n', ' ').strip()}'")
+                                # --- END DEBUG CHECK 4 ---
+
+                                yield key, data
+                                key += 1
+                            except json.JSONDecodeError as e:
+                                print(f"🚨 WARNING: Failed to parse JSON row {key} in {path}: {row[:100]}... Error: {e}. Skipping.")
+                                continue
+                            except Exception as e:
+                                print(f"🚨 WARNING: Unexpected error processing row {key} in {path}: {e}. Skipping.")
+                                continue
